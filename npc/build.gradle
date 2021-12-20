@@ -4,6 +4,12 @@ plugins {
     id 'signing'
     id 'maven-publish'
 }
+if (hasProperty('buildScan')) {
+    buildScan {
+        termsOfServiceUrl = 'https://gradle.com/terms-of-service'
+        termsOfServiceAgree = 'yes'
+    }
+}
 
 java {
     sourceCompatibility = JavaVersion.VERSION_1_7
@@ -31,23 +37,27 @@ artifacts {
     archives javadocJar
 }
 
+def VERSION = "1.0.0"
+def GROUP_ID = "io.github.neutronstarer"
+def ARTIFACT_ID = "npc"
+
 afterEvaluate{
     Properties properties = new Properties()
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
     publishing {
         publications {
             mavenAndroid(MavenPublication) {
-                groupId "io.github.neutrosntarer"
-                artifactId "npc"
-                version "1.0.0"
+                groupId GROUP_ID
+                artifactId ARTIFACT_ID
+                version VERSION
                 artifact sourcesJar
                 artifact javadocJar
                 from components.java
                 pom {
                     packaging = 'jar'
-                    name = "npc"
+                    name = ARTIFACT_ID
                     description = "Near Procedure Call."
-                    version "1.0.0"
+                    version VERSION
                     url = "https://github.com/neutronstarer/npc_kotlin"
                     licenses {
                         license {
@@ -72,10 +82,9 @@ afterEvaluate{
         }
         repositories {
             maven {
-//            url = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-                println properties.get("ossrh.username")
-                println properties.get("ossrh.password")
+                def releaseRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+                def snapshotRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                url = VERSION.endsWith('SNAPSHOT') ? snapshotRepoUrl : releaseRepoUrl
                 credentials {
                     username properties.get("ossrh.username")
                     password properties.get("ossrh.password")

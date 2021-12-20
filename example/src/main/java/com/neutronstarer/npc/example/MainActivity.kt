@@ -5,8 +5,9 @@ import android.os.Bundle
 import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
-import com.neutronstarer.npc.Cancel
-import com.neutronstarer.npc.NPC
+import io.neutronstarer.npc.Cancel
+import io.neutronstarer.npc.NPC
+
 import java.util.Timer
 import kotlin.concurrent.schedule
 class MainActivity : AppCompatActivity() {

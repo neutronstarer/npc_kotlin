@@ -6,6 +6,9 @@ dependencyResolutionManagement {
         jcenter() // Warning: this repository is going to shut down soon
     }
 }
+
+
 rootProject.name = "NPC"
 include ':npc'
 include ':example'
+
