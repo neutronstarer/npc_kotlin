@@ -1,4 +1,4 @@
-package io.neutronstarer.npc
+package com.neutronstarer.npc
 
 import java.util.Timer
 import java.util.concurrent.locks.ReentrantLock
