@@ -21,7 +21,7 @@ typealias Send = (message: Message) -> Unit
  *
  * @param send If send is null, you should extend NPC and override [send] function
  */
-open class NPC constructor(send: Send?) {
+open class NPC(private val send: Send?) {
 
     /**
      * On Register handle for method
@@ -288,7 +288,11 @@ enum class Typ(val rawValue: Int) {
      *
      * @constructor Create empty Cancel
      */
-    Cancel(4)
+    Cancel(4);
+
+    companion object {
+        fun fromRawValue(rawValue: Int) = Typ.values().first { it.rawValue == rawValue }
+    }
 }
 
 /**
