@@ -29,7 +29,7 @@ open class NPC constructor(send: Send?) {
      * @param method Method name
      * @param handle Handle
      */
-    open fun on(method: String, handle: Handle) {
+    fun on(method: String, handle: Handle) {
         _lock.lock()
         _handles[method] = handle
         _lock.unlock()
@@ -42,7 +42,7 @@ open class NPC constructor(send: Send?) {
      * @param param Method param
      */
     @JvmOverloads
-    open fun emit(method: String, param: Any? = null) {
+    fun emit(method: String, param: Any? = null) {
         _send(Message(typ = Typ.Emit, param = param))
     }
 
@@ -57,7 +57,7 @@ open class NPC constructor(send: Send?) {
      * @return [Cancel] A function to cancel delivering
      */
     @JvmOverloads
-    open fun deliver(
+    fun deliver(
         method: String,
         param: Any? = null,
         timeout: Long = 0,
@@ -114,7 +114,20 @@ open class NPC constructor(send: Send?) {
             }
         }
     }
-
+    /**
+     * Clean up all deliveries with special reason.
+     *
+     * @param reason Error
+     */
+    fun cleanUpDeliveries(reason: Any?){
+        _lock.lock()
+        val iterator = _replies.iterator()
+        while (iterator.hasNext()){
+            val v = iterator.next()
+            v.value(null, reason)
+        }
+        _lock.unlock()
+    }
     /**
      * Send Send message, usually override it if need
      *
@@ -129,7 +142,7 @@ open class NPC constructor(send: Send?) {
      *
      * @param message Message
      */
-    open fun receive(message: Message) {
+    fun receive(message: Message) {
         when (message.typ) {
             Typ.Emit -> {
                 _lock.lock()
