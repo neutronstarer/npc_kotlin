@@ -43,7 +43,7 @@ open class NPC(private val send: Send?) {
      */
     @JvmOverloads
     fun emit(method: String, param: Any? = null) {
-        _send(Message(typ = Typ.Emit, param = param))
+        _send(Message(typ = Typ.Emit, method = method, param = param))
     }
 
     /**
