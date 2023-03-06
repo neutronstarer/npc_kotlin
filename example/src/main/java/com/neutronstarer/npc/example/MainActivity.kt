@@ -26,15 +26,12 @@ class MainActivity : AppCompatActivity() {
             cancel?.let { it() }
             cancel = null
             button?.text = "Download"
-            npc0?.emit("hello","😝")
             return@Click
         }
             button?.text = "Cancel"
             var string = editTextView?.text.toString()
-            string = if (string.isEmpty()) {
+            string = string.ifEmpty {
                 "0"
-            }else{
-                string
             }
             cancel = npc0?.deliver("download","/path", timeout = string.toLong(), onNotify = {param ->
                 runOnUiThread {
@@ -51,10 +48,12 @@ class MainActivity : AppCompatActivity() {
                     cancel = null
                 }
             }) }
-        npc0 = NPC { message ->
+        npc0 = NPC()
+        npc0!!.send = { message ->
             npc1?.receive(message)
         }
-        npc1 = NPC { message ->
+        npc1 = NPC()
+        npc1!!.send = { message ->
             npc0?.receive(message)
         }
         config(npc0!!)
