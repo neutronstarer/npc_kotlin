@@ -21,29 +21,45 @@ typealias Send = (message: Message) -> Unit
  *
  * @param send If send is null, you should extend NPC and override [send] function
  */
-open class NPC(private val send: Send?) {
+public final class NPC() {
 
+    lateinit var send: Send
     /**
      * On Register handle for method
      *
      * @param method Method name
      * @param handle Handle
      */
-    fun on(method: String, handle: Handle) {
+    fun on(method: String, handle: Handle?) {
+        this[method] = handle
+    }
+    operator fun get(method: String): Handle? {
         _lock.lock()
-        _handles[method] = handle
+        val handle = _handles[method]
+        _lock.unlock()
+        return handle
+    }
+    operator fun set(method: String, handle: Handle?) {
+         _lock.lock()
+        if (handle == null){
+            _handles.remove(method)
+        }else{
+            _handles[method] = handle
+        }
         _lock.unlock()
     }
-
     /**
      * Emit Emit a message without reply
      *
      * @param method Method name
      * @param param Method param
      */
-    @JvmOverloads
     fun emit(method: String, param: Any? = null) {
-        _send(Message(typ = Typ.Emit, method = method, param = param))
+        _lock.lock()
+        val id = nextId()
+        _lock.unlock()
+        val m = Message(typ = Typ.Emit, id = id, method = method, param = param)
+        send(m)
     }
 
     /**
@@ -64,10 +80,8 @@ open class NPC(private val send: Send?) {
         onNotify: Notify? = null,
         onReply: Reply? = null
     ): Cancel {
-        val id = _id
         _lock.lock()
-        _id++
-        _lock.unlock()
+        val id = nextId()
         val completedLock = ReentrantLock()
         var completed = false
         var timer: Timer? = null
@@ -79,13 +93,11 @@ open class NPC(private val send: Send?) {
             }
             completed = true
             completedLock.unlock()
-            if (onReply != null) {
-                onReply(p, error)
-            }
             timer?.cancel()
+            onReply?.invoke(p, error)
             return@Reply true
         }
-        _lock.lock()
+        _replies[id] = reply
         if (onNotify != null) {
             _notifies[id] = Notify@{ p: Any? ->
                 completedLock.lock()
@@ -97,20 +109,22 @@ open class NPC(private val send: Send?) {
                 onNotify(p)
             }
         }
-        _replies[id] = reply
         _lock.unlock()
         if (timeout > 0) {
             timer = Timer()
             timer.schedule(timeout) {
                 if (reply(null, "timedout")) {
-                    _send(Message(typ = Typ.Cancel, id = id))
+                    val m = Message(typ = Typ.Cancel, id = id)
+                    send(m)
                 }
             }
         }
-        _send(Message(typ = Typ.Deliver, id = id, method = method, param = param))
+        val m = Message(typ = Typ.Deliver, id = id, method = method, param = param)
+        send(m)
         return {
             if (reply(null, "cancelled")) {
-                _send(Message(typ = Typ.Cancel, id = id))
+                val mm = Message(typ = Typ.Cancel, id = id)
+                send(mm)
             }
         }
     }
@@ -126,15 +140,8 @@ open class NPC(private val send: Send?) {
             val v = iterator.next()
             v.value(null, reason)
         }
+        _replies.clear()
         _lock.unlock()
-    }
-    /**
-     * Send Send message, usually override it if need
-     *
-     * @param message Message
-     */
-    open fun send(message: Message) {
-
     }
 
     /**
@@ -148,18 +155,21 @@ open class NPC(private val send: Send?) {
                 _lock.lock()
                 val handle = _handles[message.method]
                 _lock.unlock()
-                if (handle != null) {
-                    handle(message.param, { }, { _, _ -> })
+                if (handle == null){
+                    println("[NPC] bad message: ${message}")
+                    return
                 }
+                handle.invoke(message.param, { }, { _, _ -> })
             }
 
             Typ.Deliver -> {
-                val method = message.method?:return
-                val id = message.id ?: return
+                val id = message.id
                 _lock.lock()
-                val handle = _handles[method]
+                val handle = _handles[message.method]
                 _lock.unlock()
                 if (handle == null){
+                    val m = Message(typ = Typ.Ack, id = message.id, param = null, error = "unimplemented")
+                    send(m)
                     return
                 }
                 val completedLock = ReentrantLock()
@@ -171,7 +181,8 @@ open class NPC(private val send: Send?) {
                         return@Notify
                     }
                     completedLock.unlock()
-                    _send(Message(typ = Typ.Notify, id = id, param = param))
+                    val m = Message(typ = Typ.Notify, id = id, param = param)
+                    send(m)
                 }, Reply@{ param, error ->
                     completedLock.lock()
                     if (completed){
@@ -183,7 +194,8 @@ open class NPC(private val send: Send?) {
                     _lock.lock()
                     _cancels.remove(id)
                     _lock.unlock()
-                    _send(Message(typ = Typ.Ack, id = id, param = param, error = error))
+                    val m = Message(typ = Typ.Ack, id = id, param = param, error = error)
+                    send(m)
                 })
                 if (cancel != null){
                     _lock.lock()
@@ -208,44 +220,38 @@ open class NPC(private val send: Send?) {
                 _lock.lock()
                 val reply = _replies[message.id]
                 _lock.unlock()
-                if (reply != null){
-                    reply(message.param, message.error)
-                }
+                reply?.invoke(message.param, message.error)
             }
 
             Typ.Notify -> {
                 _lock.lock()
                 val notify = _notifies[message.id]
                 _lock.unlock()
-                if(notify != null){
-                    notify(message.param)
-                }
+                notify?.invoke(message.param)
             }
 
             Typ.Cancel -> {
                 _lock.lock()
                 val cancel = _cancels[message.id]
                 _lock.unlock()
-                if (cancel != null) {
-                    cancel()
-                }
+                cancel?.invoke()
             }
         }
     }
-
-    private var _id = 0
+    private fun nextId(): Int{
+        if (_id < 0x7fffffff){
+            _id++
+        }else{
+            _id = 0
+        }
+        return _id
+    }
+    private var _id = -1
     private var _notifies = mutableMapOf<Int, Notify>()
     private val _cancels = mutableMapOf<Int, Cancel>()
     private val _replies = mutableMapOf<Int, (param: Any?, error: Any?) -> Boolean>()
     private val _handles = mutableMapOf<String, Handle>()
     private val _lock = ReentrantLock()
-    private val _send: Send = if (send == null) {
-        { message ->
-            send(message)
-        }
-    } else {
-        send
-    }
 }
 
 /**
@@ -307,7 +313,7 @@ enum class Typ(val rawValue: Int) {
  */
 class Message constructor(
     val typ: Typ,
-    val id: Int? = null,
+    val id: Int,
     val method: String? = null,
     val param: Any? = null,
     val error: Any? = null
@@ -315,9 +321,7 @@ class Message constructor(
     override fun toString(): String {
         val v = mutableMapOf<String,Any>()
         v["typ"] = typ.rawValue
-        if (id != null){
-            v["id"] = id
-        }
+        v["id"] = id
         if (method != null){
             v["method"] = method
         }
