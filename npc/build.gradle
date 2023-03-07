@@ -37,7 +37,7 @@ artifacts {
     archives javadocJar
 }
 
-def VERSION = "4.0.0"
+def VERSION = "4.1.0"
 def GROUP_ID = "io.github.neutronstarer"
 def ARTIFACT_ID = "npc"
 
