@@ -18,8 +18,6 @@ typealias Send = (message: Message) -> Unit
  * NPC Near Procedure Call
  *
  * @constructor Create NPC
- *
- * @param send If send is null, you should extend NPC and override [send] function
  */
 public final class NPC() {
 
@@ -77,8 +75,8 @@ public final class NPC() {
         method: String,
         param: Any? = null,
         timeout: Long = 0,
-        onNotify: Notify? = null,
-        onReply: Reply? = null
+        onReply: Reply? = null,
+        onNotify: Notify? = null
     ): Cancel {
         _lock.lock()
         val id = nextId()
