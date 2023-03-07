@@ -150,22 +150,33 @@ public final class NPC() {
     fun receive(message: Message) {
         when (message.typ) {
             Typ.Emit -> {
+                val method = message.method
+                if (method == null){
+                    println("[NPC] bad message: ${message}")
+                    return
+                }
                 _lock.lock()
-                val handle = _handles[message.method]
+                val handle = _handles[method]
                 _lock.unlock()
                 if (handle == null){
-                    println("[NPC] bad message: ${message}")
+                    println("[NPC] unhandled message: ${message}")
                     return
                 }
                 handle.invoke(message.param, { }, { _, _ -> })
             }
 
             Typ.Deliver -> {
+                val method = message.method
+                if (method == null){
+                    println("[NPC] bad message: ${message}")
+                    return
+                }
                 val id = message.id
                 _lock.lock()
                 val handle = _handles[message.method]
                 _lock.unlock()
                 if (handle == null){
+                    println("[NPC] unhandled message: ${message}")
                     val m = Message(typ = Typ.Ack, id = message.id, param = null, error = "unimplemented")
                     send(m)
                     return
