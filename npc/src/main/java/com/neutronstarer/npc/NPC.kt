@@ -140,12 +140,11 @@ public final class NPC() {
      */
     fun cleanUp(reason: Any?){
         _lock.lock()
-        val iterator = _replies.iterator()
-        while (iterator.hasNext()){
-            val v = iterator.next()
-            v.value(null, reason)
-        }
+        val values = _replies.values
         _lock.unlock()
+        values.forEach {
+            it(null, reason)
+        }
     }
 
     /**
@@ -254,14 +253,14 @@ public final class NPC() {
         }
     }
     private fun nextId(): Int{
-        if (_id < 0x7fffffff){
+        if (_id < 2147483647){
             _id++
         }else{
-            _id = 0
+            _id = -2147483647
         }
         return _id
     }
-    private var _id = -1
+    private var _id = -2147483648
     private var _notifies = mutableMapOf<Int, Notify>()
     private val _cancels = mutableMapOf<Int, Cancel>()
     private val _replies = mutableMapOf<Int, (param: Any?, error: Any?) -> Boolean>()
