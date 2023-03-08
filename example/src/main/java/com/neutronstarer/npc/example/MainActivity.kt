@@ -61,7 +61,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun config(npc: NPC){
-        npc.on("download") Handle@{ param, notify, reply ->
+        npc.on("download") Handle@{ param, reply, notify ->
             val timer = Timer()
             var i = 0
             timer.schedule(0, 1000) Timer@{
