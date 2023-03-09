@@ -49,11 +49,11 @@ class MainActivity : AppCompatActivity() {
                 }
             }) }
         npc0 = NPC()
-        npc0!!.send = { message ->
+        npc0!!.connect { message ->
             npc1?.receive(message)
         }
         npc1 = NPC()
-        npc1!!.send = { message ->
+        npc1!!.connect { message ->
             npc0?.receive(message)
         }
         config(npc0!!)
