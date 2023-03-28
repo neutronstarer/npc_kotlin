@@ -1,62 +1,66 @@
 plugins {
-    id 'java-library'
-    id 'kotlin'
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
     id 'signing'
     id 'maven-publish'
 }
-if (hasProperty('buildScan')) {
-    buildScan {
-        termsOfServiceUrl = 'https://gradle.com/terms-of-service'
-        termsOfServiceAgree = 'yes'
-    }
-}
 
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_7
-    targetCompatibility = JavaVersion.VERSION_1_7
-}
-
-task javadocJar(type: Jar) {
-    archiveClassifier.set("javadoc")
-    from javadoc
-}
-
-task sourcesJar(type: Jar) {
-    archiveClassifier.set('sources')
-    from sourceSets.main.allSource
-}
-
-tasks.withType(Javadoc) {
-    options.addStringOption('Xdoclint:none')
-    options.addStringOption('encoding', 'UTF-8')
-    options.addStringOption('charset', 'UTF-8')
-}
-
-artifacts {
-    archives sourcesJar
-    archives javadocJar
-}
-
-def VERSION = "4.6.1"
+def VERSION = "4.7.0"
 def GROUP_ID = "io.github.neutronstarer"
 def ARTIFACT_ID = "npc"
+def DESCRIPTION = "Near Procedure Call"
+
+android {
+    namespace 'com.neutronstarer.npc'
+    compileSdkVersion 33
+
+    defaultConfig {
+        minSdkVersion 16
+        targetSdkVersion 33
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        consumerProguardFiles "consumer-rules.pro"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+    kotlinOptions {
+        jvmTarget = '1.8'
+    }
+}
 
 afterEvaluate{
     Properties properties = new Properties()
     properties.load(project.rootProject.file('local.properties').newDataInputStream())
     publishing {
+        repositories {
+            maven {
+                def releaseRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+                def snapshotRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
+                url = VERSION.endsWith('SNAPSHOT') ? snapshotRepoUrl : releaseRepoUrl
+                credentials {
+                    username properties.get("ossrh.username")
+                    password properties.get("ossrh.password")
+                }
+            }
+        }
         publications {
-            mavenAndroid(MavenPublication) {
+            release(MavenPublication) {
+                from components.release
                 groupId GROUP_ID
                 artifactId ARTIFACT_ID
                 version VERSION
-                artifact sourcesJar
-                artifact javadocJar
-                from components.java
                 pom {
                     packaging = 'jar'
                     name = ARTIFACT_ID
-                    description = "Near Procedure Call."
+                    description = DESCRIPTION
                     version VERSION
                     url = "https://github.com/neutronstarer/npc_kotlin"
                     licenses {
@@ -80,20 +84,10 @@ afterEvaluate{
                 }
             }
         }
-        repositories {
-            maven {
-                def releaseRepoUrl = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
-                def snapshotRepoUrl = "https://s01.oss.sonatype.org/content/repositories/snapshots/"
-                url = VERSION.endsWith('SNAPSHOT') ? snapshotRepoUrl : releaseRepoUrl
-                credentials {
-                    username properties.get("ossrh.username")
-                    password properties.get("ossrh.password")
-                }
-            }
-        }
+
     }
 
     signing {
-        sign publishing.publications.mavenAndroid
+        sign publishing.publications.release
     }
 }
